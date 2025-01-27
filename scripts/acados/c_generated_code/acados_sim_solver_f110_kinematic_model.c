@@ -1,8 +1,5 @@
 /*
- * Copyright 2019 Gianluca Frison, Dimitris Kouzoupis, Robin Verschueren,
- * Andrea Zanelli, Niels van Duijkeren, Jonathan Frey, Tommaso Sartor,
- * Branimir Novoselnik, Rien Quirynen, Rezart Qelibari, Dang Doan,
- * Jonas Koenemann, Yutao Chen, Tobias Schöls, Jonas Schlagenhauf, Moritz Diehl
+ * Copyright (c) The acados authors.
  *
  * This file is part of acados.
  *
@@ -49,116 +46,136 @@
 #include "acados_sim_solver_f110_kinematic_model.h"
 
 
-// ** global data **
-sim_config  * f110_kinematic_model_sim_config;
-sim_in      * f110_kinematic_model_sim_in;
-sim_out     * f110_kinematic_model_sim_out;
-void        * f110_kinematic_model_sim_dims;
-sim_opts    * f110_kinematic_model_sim_opts;
-sim_solver  * f110_kinematic_model_sim_solver;
+// ** solver data **
+
+f110_kinematic_model_sim_solver_capsule * f110_kinematic_model_acados_sim_solver_create_capsule()
+{
+    void* capsule_mem = malloc(sizeof(f110_kinematic_model_sim_solver_capsule));
+    f110_kinematic_model_sim_solver_capsule *capsule = (f110_kinematic_model_sim_solver_capsule *) capsule_mem;
+
+    return capsule;
+}
 
 
-external_function_param_casadi * sim_forw_vde_casadi;
-external_function_param_casadi * sim_expl_ode_fun_casadi;
+int f110_kinematic_model_acados_sim_solver_free_capsule(f110_kinematic_model_sim_solver_capsule * capsule)
+{
+    free(capsule);
+    return 0;
+}
 
 
-
-int f110_kinematic_model_acados_sim_create()
+int f110_kinematic_model_acados_sim_create(f110_kinematic_model_sim_solver_capsule * capsule)
 {
     // initialize
-    int nx = 7;
-    int nu = 3;
-    int nz = 0;
+    const int nx = F110_KINEMATIC_MODEL_NX;
+    const int nu = F110_KINEMATIC_MODEL_NU;
+    const int nz = F110_KINEMATIC_MODEL_NZ;
+    const int np = F110_KINEMATIC_MODEL_NP;
+    bool tmp_bool;
 
-    
     double Tsim = 0.05;
+
+    external_function_opts ext_fun_opts;
+    external_function_opts_set_to_default(&ext_fun_opts);
+    ext_fun_opts.external_workspace = false;
 
     
     // explicit ode
-    sim_forw_vde_casadi = (external_function_param_casadi *) malloc(sizeof(external_function_param_casadi));
-    sim_expl_ode_fun_casadi = (external_function_param_casadi *) malloc(sizeof(external_function_param_casadi));
+    capsule->sim_expl_vde_forw = (external_function_param_casadi *) malloc(sizeof(external_function_param_casadi));
+    capsule->sim_vde_adj_casadi = (external_function_param_casadi *) malloc(sizeof(external_function_param_casadi));
+    capsule->sim_expl_ode_fun_casadi = (external_function_param_casadi *) malloc(sizeof(external_function_param_casadi));
 
-    sim_forw_vde_casadi->casadi_fun = &f110_kinematic_model_expl_vde_forw;
-    sim_forw_vde_casadi->casadi_n_in = &f110_kinematic_model_expl_vde_forw_n_in;
-    sim_forw_vde_casadi->casadi_n_out = &f110_kinematic_model_expl_vde_forw_n_out;
-    sim_forw_vde_casadi->casadi_sparsity_in = &f110_kinematic_model_expl_vde_forw_sparsity_in;
-    sim_forw_vde_casadi->casadi_sparsity_out = &f110_kinematic_model_expl_vde_forw_sparsity_out;
-    sim_forw_vde_casadi->casadi_work = &f110_kinematic_model_expl_vde_forw_work;
-    external_function_param_casadi_create(sim_forw_vde_casadi, 12);
+    capsule->sim_expl_vde_forw->casadi_fun = &f110_kinematic_model_expl_vde_forw;
+    capsule->sim_expl_vde_forw->casadi_n_in = &f110_kinematic_model_expl_vde_forw_n_in;
+    capsule->sim_expl_vde_forw->casadi_n_out = &f110_kinematic_model_expl_vde_forw_n_out;
+    capsule->sim_expl_vde_forw->casadi_sparsity_in = &f110_kinematic_model_expl_vde_forw_sparsity_in;
+    capsule->sim_expl_vde_forw->casadi_sparsity_out = &f110_kinematic_model_expl_vde_forw_sparsity_out;
+    capsule->sim_expl_vde_forw->casadi_work = &f110_kinematic_model_expl_vde_forw_work;
+    external_function_param_casadi_create(capsule->sim_expl_vde_forw, np, &ext_fun_opts);
 
-    sim_expl_ode_fun_casadi->casadi_fun = &f110_kinematic_model_expl_ode_fun;
-    sim_expl_ode_fun_casadi->casadi_n_in = &f110_kinematic_model_expl_ode_fun_n_in;
-    sim_expl_ode_fun_casadi->casadi_n_out = &f110_kinematic_model_expl_ode_fun_n_out;
-    sim_expl_ode_fun_casadi->casadi_sparsity_in = &f110_kinematic_model_expl_ode_fun_sparsity_in;
-    sim_expl_ode_fun_casadi->casadi_sparsity_out = &f110_kinematic_model_expl_ode_fun_sparsity_out;
-    sim_expl_ode_fun_casadi->casadi_work = &f110_kinematic_model_expl_ode_fun_work;
-    external_function_param_casadi_create(sim_expl_ode_fun_casadi, 12);
+    capsule->sim_vde_adj_casadi->casadi_fun = &f110_kinematic_model_expl_vde_adj;
+    capsule->sim_vde_adj_casadi->casadi_n_in = &f110_kinematic_model_expl_vde_adj_n_in;
+    capsule->sim_vde_adj_casadi->casadi_n_out = &f110_kinematic_model_expl_vde_adj_n_out;
+    capsule->sim_vde_adj_casadi->casadi_sparsity_in = &f110_kinematic_model_expl_vde_adj_sparsity_in;
+    capsule->sim_vde_adj_casadi->casadi_sparsity_out = &f110_kinematic_model_expl_vde_adj_sparsity_out;
+    capsule->sim_vde_adj_casadi->casadi_work = &f110_kinematic_model_expl_vde_adj_work;
+    external_function_param_casadi_create(capsule->sim_vde_adj_casadi, np, &ext_fun_opts);
+
+    capsule->sim_expl_ode_fun_casadi->casadi_fun = &f110_kinematic_model_expl_ode_fun;
+    capsule->sim_expl_ode_fun_casadi->casadi_n_in = &f110_kinematic_model_expl_ode_fun_n_in;
+    capsule->sim_expl_ode_fun_casadi->casadi_n_out = &f110_kinematic_model_expl_ode_fun_n_out;
+    capsule->sim_expl_ode_fun_casadi->casadi_sparsity_in = &f110_kinematic_model_expl_ode_fun_sparsity_in;
+    capsule->sim_expl_ode_fun_casadi->casadi_sparsity_out = &f110_kinematic_model_expl_ode_fun_sparsity_out;
+    capsule->sim_expl_ode_fun_casadi->casadi_work = &f110_kinematic_model_expl_ode_fun_work;
+    external_function_param_casadi_create(capsule->sim_expl_ode_fun_casadi, np, &ext_fun_opts);
 
     
 
     // sim plan & config
-    sim_solver_plan plan;
+    sim_solver_plan_t plan;
     plan.sim_solver = ERK;
 
     // create correct config based on plan
-    f110_kinematic_model_sim_config = sim_config_create(plan);
+    sim_config * f110_kinematic_model_sim_config = sim_config_create(plan);
+    capsule->acados_sim_config = f110_kinematic_model_sim_config;
 
     // sim dims
-    f110_kinematic_model_sim_dims = sim_dims_create(f110_kinematic_model_sim_config);
+    void *f110_kinematic_model_sim_dims = sim_dims_create(f110_kinematic_model_sim_config);
+    capsule->acados_sim_dims = f110_kinematic_model_sim_dims;
     sim_dims_set(f110_kinematic_model_sim_config, f110_kinematic_model_sim_dims, "nx", &nx);
     sim_dims_set(f110_kinematic_model_sim_config, f110_kinematic_model_sim_dims, "nu", &nu);
     sim_dims_set(f110_kinematic_model_sim_config, f110_kinematic_model_sim_dims, "nz", &nz);
 
 
     // sim opts
-    f110_kinematic_model_sim_opts = sim_opts_create(f110_kinematic_model_sim_config, f110_kinematic_model_sim_dims);
-    int tmp_int = 4;
+    sim_opts *f110_kinematic_model_sim_opts = sim_opts_create(f110_kinematic_model_sim_config, f110_kinematic_model_sim_dims);
+    capsule->acados_sim_opts = f110_kinematic_model_sim_opts;
+    int tmp_int = 3;
+    sim_opts_set(f110_kinematic_model_sim_config, f110_kinematic_model_sim_opts, "newton_iter", &tmp_int);
+    double tmp_double = 0;
+    sim_opts_set(f110_kinematic_model_sim_config, f110_kinematic_model_sim_opts, "newton_tol", &tmp_double);
+    sim_collocation_type collocation_type = GAUSS_LEGENDRE;
+    sim_opts_set(f110_kinematic_model_sim_config, f110_kinematic_model_sim_opts, "collocation_type", &collocation_type);
+
+ 
+    tmp_int = 4;
     sim_opts_set(f110_kinematic_model_sim_config, f110_kinematic_model_sim_opts, "num_stages", &tmp_int);
     tmp_int = 1;
     sim_opts_set(f110_kinematic_model_sim_config, f110_kinematic_model_sim_opts, "num_steps", &tmp_int);
-    tmp_int = 3;
-    sim_opts_set(f110_kinematic_model_sim_config, f110_kinematic_model_sim_opts, "newton_iter", &tmp_int);
-    bool tmp_bool = false;
+    tmp_bool = 0;
     sim_opts_set(f110_kinematic_model_sim_config, f110_kinematic_model_sim_opts, "jac_reuse", &tmp_bool);
 
 
-
     // sim in / out
-    f110_kinematic_model_sim_in  = sim_in_create(f110_kinematic_model_sim_config, f110_kinematic_model_sim_dims);
-    f110_kinematic_model_sim_out = sim_out_create(f110_kinematic_model_sim_config, f110_kinematic_model_sim_dims);
+    sim_in *f110_kinematic_model_sim_in = sim_in_create(f110_kinematic_model_sim_config, f110_kinematic_model_sim_dims);
+    capsule->acados_sim_in = f110_kinematic_model_sim_in;
+    sim_out *f110_kinematic_model_sim_out = sim_out_create(f110_kinematic_model_sim_config, f110_kinematic_model_sim_dims);
+    capsule->acados_sim_out = f110_kinematic_model_sim_out;
+
     sim_in_set(f110_kinematic_model_sim_config, f110_kinematic_model_sim_dims,
                f110_kinematic_model_sim_in, "T", &Tsim);
 
     // model functions
     f110_kinematic_model_sim_config->model_set(f110_kinematic_model_sim_in->model,
-                 "expl_vde_for", sim_forw_vde_casadi);
+                 "expl_vde_forw", capsule->sim_expl_vde_forw);
     f110_kinematic_model_sim_config->model_set(f110_kinematic_model_sim_in->model,
-                 "expl_ode_fun", sim_expl_ode_fun_casadi);
+                 "expl_vde_adj", capsule->sim_vde_adj_casadi);
+    f110_kinematic_model_sim_config->model_set(f110_kinematic_model_sim_in->model,
+                 "expl_ode_fun", capsule->sim_expl_ode_fun_casadi);
 
     // sim solver
-    f110_kinematic_model_sim_solver = sim_solver_create(f110_kinematic_model_sim_config,
-                                               f110_kinematic_model_sim_dims, f110_kinematic_model_sim_opts);
+    sim_solver *f110_kinematic_model_sim_solver = sim_solver_create(f110_kinematic_model_sim_config,
+                                               f110_kinematic_model_sim_dims, f110_kinematic_model_sim_opts, f110_kinematic_model_sim_in);
+    capsule->acados_sim_solver = f110_kinematic_model_sim_solver;
+
 
     /* initialize parameter values */
+    double* p = calloc(np, sizeof(double));
     
-    // initialize parameters to nominal value
-    double p[12];
-    
-    p[0] = 0;
-    p[1] = 0;
-    p[2] = 0;
-    p[3] = 0;
-    p[4] = 0;
-    p[5] = 0;
-    p[6] = 0;
-    p[7] = 0;
-    p[8] = 0;
-    p[9] = 0;
-    p[10] = 0;
-    p[11] = 0;
-    sim_forw_vde_casadi[0].set_param(sim_forw_vde_casadi, p);
-    sim_expl_ode_fun_casadi[0].set_param(sim_expl_ode_fun_casadi, p);
-    
+
+    f110_kinematic_model_acados_sim_update_params(capsule, p, np);
+    free(p);
+
 
     /* initialize input */
     // x
@@ -195,11 +212,11 @@ int f110_kinematic_model_acados_sim_create()
 }
 
 
-int f110_kinematic_model_acados_sim_solve()
+int f110_kinematic_model_acados_sim_solve(f110_kinematic_model_sim_solver_capsule *capsule)
 {
     // integrate dynamics using acados sim_solver
-    int status = sim_solve(f110_kinematic_model_sim_solver,
-                           f110_kinematic_model_sim_in, f110_kinematic_model_sim_out);
+    int status = sim_solve(capsule->acados_sim_solver,
+                           capsule->acados_sim_in, capsule->acados_sim_out);
     if (status != 0)
         printf("error in f110_kinematic_model_acados_sim_solve()! Exiting.\n");
 
@@ -207,62 +224,86 @@ int f110_kinematic_model_acados_sim_solve()
 }
 
 
-int f110_kinematic_model_acados_sim_free()
+void f110_kinematic_model_acados_sim_batch_solve(f110_kinematic_model_sim_solver_capsule ** capsules, int N_batch)
+{
+
+    for (int i = 0; i < N_batch; i++)
+    {
+        sim_solve(capsules[i]->acados_sim_solver, capsules[i]->acados_sim_in, capsules[i]->acados_sim_out);
+    }
+
+
+    return;
+}
+
+
+int f110_kinematic_model_acados_sim_free(f110_kinematic_model_sim_solver_capsule *capsule)
 {
     // free memory
-    sim_solver_destroy(f110_kinematic_model_sim_solver);
-    sim_in_destroy(f110_kinematic_model_sim_in);
-    sim_out_destroy(f110_kinematic_model_sim_out);
-    sim_opts_destroy(f110_kinematic_model_sim_opts);
-    sim_dims_destroy(f110_kinematic_model_sim_dims);
-    sim_config_destroy(f110_kinematic_model_sim_config);
+    sim_solver_destroy(capsule->acados_sim_solver);
+    sim_in_destroy(capsule->acados_sim_in);
+    sim_out_destroy(capsule->acados_sim_out);
+    sim_opts_destroy(capsule->acados_sim_opts);
+    sim_dims_destroy(capsule->acados_sim_dims);
+    sim_config_destroy(capsule->acados_sim_config);
 
     // free external function
-    external_function_param_casadi_free(sim_forw_vde_casadi);
-    external_function_param_casadi_free(sim_expl_ode_fun_casadi);
+    external_function_param_casadi_free(capsule->sim_expl_vde_forw);
+    external_function_param_casadi_free(capsule->sim_vde_adj_casadi);
+    external_function_param_casadi_free(capsule->sim_expl_ode_fun_casadi);
+    free(capsule->sim_expl_vde_forw);
+    free(capsule->sim_vde_adj_casadi);
+    free(capsule->sim_expl_ode_fun_casadi);
 
     return 0;
 }
 
 
-int f110_kinematic_model_acados_sim_update_params(double *p, int np)
+int f110_kinematic_model_acados_sim_update_params(f110_kinematic_model_sim_solver_capsule *capsule, double *p, int np)
 {
     int status = 0;
-    int casadi_np = 12;
-    sim_forw_vde_casadi[0].set_param(sim_forw_vde_casadi, p);
-    sim_expl_ode_fun_casadi[0].set_param(sim_expl_ode_fun_casadi, p);
+    int casadi_np = F110_KINEMATIC_MODEL_NP;
+
+    if (casadi_np != np) {
+        printf("f110_kinematic_model_acados_sim_update_params: trying to set %i parameters for external functions."
+            " External function has %i parameters. Exiting.\n", np, casadi_np);
+        exit(1);
+    }
+    capsule->sim_expl_vde_forw[0].set_param(capsule->sim_expl_vde_forw, p);
+    capsule->sim_vde_adj_casadi[0].set_param(capsule->sim_vde_adj_casadi, p);
+    capsule->sim_expl_ode_fun_casadi[0].set_param(capsule->sim_expl_ode_fun_casadi, p);
 
     return status;
 }
 
 /* getters pointers to C objects*/
-sim_config * f110_kinematic_model_acados_get_sim_config()
+sim_config * f110_kinematic_model_acados_get_sim_config(f110_kinematic_model_sim_solver_capsule *capsule)
 {
-    return f110_kinematic_model_sim_config;
+    return capsule->acados_sim_config;
 };
 
-sim_in * f110_kinematic_model_acados_get_sim_in()
+sim_in * f110_kinematic_model_acados_get_sim_in(f110_kinematic_model_sim_solver_capsule *capsule)
 {
-    return f110_kinematic_model_sim_in;
+    return capsule->acados_sim_in;
 };
 
-sim_out * f110_kinematic_model_acados_get_sim_out()
+sim_out * f110_kinematic_model_acados_get_sim_out(f110_kinematic_model_sim_solver_capsule *capsule)
 {
-    return f110_kinematic_model_sim_out;
+    return capsule->acados_sim_out;
 };
 
-void * f110_kinematic_model_acados_get_sim_dims()
+void * f110_kinematic_model_acados_get_sim_dims(f110_kinematic_model_sim_solver_capsule *capsule)
 {
-    return f110_kinematic_model_sim_dims;
+    return capsule->acados_sim_dims;
 };
 
-sim_opts * f110_kinematic_model_acados_get_sim_opts()
+sim_opts * f110_kinematic_model_acados_get_sim_opts(f110_kinematic_model_sim_solver_capsule *capsule)
 {
-    return f110_kinematic_model_sim_opts;
+    return capsule->acados_sim_opts;
 };
 
-sim_solver  * f110_kinematic_model_acados_get_sim_solver()
+sim_solver  * f110_kinematic_model_acados_get_sim_solver(f110_kinematic_model_sim_solver_capsule *capsule)
 {
-    return f110_kinematic_model_sim_solver;
+    return capsule->acados_sim_solver;
 };
 

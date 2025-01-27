@@ -1,8 +1,5 @@
 /*
- * Copyright 2019 Gianluca Frison, Dimitris Kouzoupis, Robin Verschueren,
- * Andrea Zanelli, Niels van Duijkeren, Jonathan Frey, Tommaso Sartor,
- * Branimir Novoselnik, Rien Quirynen, Rezart Qelibari, Dang Doan,
- * Jonas Koenemann, Yutao Chen, Tobias Schöls, Jonas Schlagenhauf, Moritz Diehl
+ * Copyright (c) The acados authors.
  *
  * This file is part of acados.
  *
@@ -37,36 +34,69 @@
 #include "acados_c/sim_interface.h"
 #include "acados_c/external_function_interface.h"
 
+#define F110_DYNAMIC_MODEL_NX     9
+#define F110_DYNAMIC_MODEL_NZ     0
+#define F110_DYNAMIC_MODEL_NU     3
+#define F110_DYNAMIC_MODEL_NP     12
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int f110_dynamic_model_acados_sim_create();
-int f110_dynamic_model_acados_sim_solve();
-int f110_dynamic_model_acados_sim_free();
 
-sim_config  * f110_dynamic_model_acados_get_sim_config();
-sim_in      * f110_dynamic_model_acados_get_sim_in();
-sim_out     * f110_dynamic_model_acados_get_sim_out();
-void        * f110_dynamic_model_acados_get_sim_dims();
-sim_opts    * f110_dynamic_model_acados_get_sim_opts();
-sim_solver  * f110_dynamic_model_acados_get_sim_solver();
+// ** capsule for solver data **
+typedef struct f110_dynamic_model_sim_solver_capsule
+{
+    // acados objects
+    sim_in *acados_sim_in;
+    sim_out *acados_sim_out;
+    sim_solver *acados_sim_solver;
+    sim_opts *acados_sim_opts;
+    sim_config *acados_sim_config;
+    void *acados_sim_dims;
 
-// ** global data **
-extern sim_config  * f110_dynamic_model_sim_config;
-extern sim_in      * f110_dynamic_model_sim_in;
-extern sim_out     * f110_dynamic_model_sim_out;
-extern void        * f110_dynamic_model_sim_dims;
-extern sim_opts    * f110_dynamic_model_sim_opts;
-extern sim_solver  * f110_dynamic_model_sim_solver;
+    /* external functions */
+    // ERK
+    external_function_param_casadi * sim_expl_vde_forw;
+    external_function_param_casadi * sim_vde_adj_casadi;
+    external_function_param_casadi * sim_expl_ode_fun_casadi;
+    external_function_param_casadi * sim_expl_ode_hess;
+
+    // IRK
+    external_function_param_casadi * sim_impl_dae_fun;
+    external_function_param_casadi * sim_impl_dae_fun_jac_x_xdot_z;
+    external_function_param_casadi * sim_impl_dae_jac_x_xdot_u_z;
+    external_function_param_casadi * sim_impl_dae_hess;
+
+    // GNSF
+    external_function_param_casadi * sim_gnsf_phi_fun;
+    external_function_param_casadi * sim_gnsf_phi_fun_jac_y;
+    external_function_param_casadi * sim_gnsf_phi_jac_y_uhat;
+    external_function_param_casadi * sim_gnsf_f_lo_jac_x1_x1dot_u_z;
+    external_function_param_casadi * sim_gnsf_get_matrices_fun;
+
+} f110_dynamic_model_sim_solver_capsule;
+
+
+ACADOS_SYMBOL_EXPORT int f110_dynamic_model_acados_sim_create(f110_dynamic_model_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT int f110_dynamic_model_acados_sim_solve(f110_dynamic_model_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT void f110_dynamic_model_acados_sim_batch_solve(f110_dynamic_model_sim_solver_capsule **capsules, int N_batch);
+ACADOS_SYMBOL_EXPORT int f110_dynamic_model_acados_sim_free(f110_dynamic_model_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT int f110_dynamic_model_acados_sim_update_params(f110_dynamic_model_sim_solver_capsule *capsule, double *value, int np);
+
+ACADOS_SYMBOL_EXPORT sim_config * f110_dynamic_model_acados_get_sim_config(f110_dynamic_model_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT sim_in * f110_dynamic_model_acados_get_sim_in(f110_dynamic_model_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT sim_out * f110_dynamic_model_acados_get_sim_out(f110_dynamic_model_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT void * f110_dynamic_model_acados_get_sim_dims(f110_dynamic_model_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT sim_opts * f110_dynamic_model_acados_get_sim_opts(f110_dynamic_model_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT sim_solver * f110_dynamic_model_acados_get_sim_solver(f110_dynamic_model_sim_solver_capsule *capsule);
+
+
+ACADOS_SYMBOL_EXPORT f110_dynamic_model_sim_solver_capsule * f110_dynamic_model_acados_sim_solver_create_capsule(void);
+ACADOS_SYMBOL_EXPORT int f110_dynamic_model_acados_sim_solver_free_capsule(f110_dynamic_model_sim_solver_capsule *capsule);
 
 #ifdef __cplusplus
 }
 #endif
-
-
-extern external_function_param_casadi * sim_forw_vde_casadi;
-extern external_function_param_casadi * sim_expl_ode_fun_casadi;
-
 
 #endif  // ACADOS_SIM_f110_dynamic_model_H_

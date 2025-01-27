@@ -1,8 +1,5 @@
 /*
- * Copyright 2019 Gianluca Frison, Dimitris Kouzoupis, Robin Verschueren,
- * Andrea Zanelli, Niels van Duijkeren, Jonathan Frey, Tommaso Sartor,
- * Branimir Novoselnik, Rien Quirynen, Rezart Qelibari, Dang Doan,
- * Jonas Koenemann, Yutao Chen, Tobias Schöls, Jonas Schlagenhauf, Moritz Diehl
+ * Copyright (c) The acados authors.
  *
  * This file is part of acados.
  *
@@ -46,24 +43,24 @@ int f110_dynamic_model_expl_ode_fun(const real_t** arg, real_t** res, int* iw, r
 int f110_dynamic_model_expl_ode_fun_work(int *, int *, int *, int *);
 const int *f110_dynamic_model_expl_ode_fun_sparsity_in(int);
 const int *f110_dynamic_model_expl_ode_fun_sparsity_out(int);
-int f110_dynamic_model_expl_ode_fun_n_in();
-int f110_dynamic_model_expl_ode_fun_n_out();
+int f110_dynamic_model_expl_ode_fun_n_in(void);
+int f110_dynamic_model_expl_ode_fun_n_out(void);
 
 // explicit forward VDE
 int f110_dynamic_model_expl_vde_forw(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
 int f110_dynamic_model_expl_vde_forw_work(int *, int *, int *, int *);
 const int *f110_dynamic_model_expl_vde_forw_sparsity_in(int);
 const int *f110_dynamic_model_expl_vde_forw_sparsity_out(int);
-int f110_dynamic_model_expl_vde_forw_n_in();
-int f110_dynamic_model_expl_vde_forw_n_out();
+int f110_dynamic_model_expl_vde_forw_n_in(void);
+int f110_dynamic_model_expl_vde_forw_n_out(void);
 
 // explicit adjoint VDE
 int f110_dynamic_model_expl_vde_adj(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
 int f110_dynamic_model_expl_vde_adj_work(int *, int *, int *, int *);
 const int *f110_dynamic_model_expl_vde_adj_sparsity_in(int);
 const int *f110_dynamic_model_expl_vde_adj_sparsity_out(int);
-int f110_dynamic_model_expl_vde_adj_n_in();
-int f110_dynamic_model_expl_vde_adj_n_out();
+int f110_dynamic_model_expl_vde_adj_n_in(void);
+int f110_dynamic_model_expl_vde_adj_n_out(void);
 
 
 

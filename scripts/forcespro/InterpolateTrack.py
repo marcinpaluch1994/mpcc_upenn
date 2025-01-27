@@ -128,7 +128,7 @@ def generatelookuptable(track):
 
     lutable_density = 100 #[p/m]
 
-    npoints = np.int(np.floor(2 * smax * lutable_density))
+    npoints = int(np.floor(2 * smax * lutable_density))
     print("table generated with npoints = ", npoints)
     svals = np.linspace(0, 2*smax, npoints)
     tvals = ts_inverse(svals)

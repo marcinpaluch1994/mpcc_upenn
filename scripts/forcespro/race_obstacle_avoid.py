@@ -56,7 +56,7 @@ def main(generatesolvers):
     Tsim = 5
     Tf = params['Tf']
     N = params['N']
-    Nsim = np.int(np.floor(N/Tf*Tsim))
+    Nsim = int(np.floor(N/Tf*Tsim))
 
     trackname = "silly"
     track_lu_table, smax = InterpolateTrack.generatelookuptable("tracks/"+trackname)

@@ -63,7 +63,7 @@ class racer():
 
         self.Tf = params['Tf']
         self.N = params['N']
-        self.Nsim = np.int(np.floor(self.N/self.Tf*Tsim))
+        self.Nsim = int(np.floor(self.N/self.Tf*Tsim))
 
         self.Qc = params['Qc']
         self.Ql = params['Ql']

@@ -57,7 +57,7 @@ def main():
     Tsim = 50
     Tf = params['Tf']
     N = params['N']
-    Nsim = np.int(np.floor(N/Tf*Tsim))
+    Nsim = int(np.floor(N/Tf*Tsim))
 
 
     trackname = "slider"

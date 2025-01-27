@@ -48,7 +48,7 @@ def eval_raw(waypoints, a, b, t):
     n = len(waypoints)
     t = np.mod(t, n)
     segment = np.floor(t)
-    segment = np.int(segment)
+    segment = int(segment)
 
     if segment>=n:
         t =n-0.0001
@@ -57,7 +57,7 @@ def eval_raw(waypoints, a, b, t):
         t = 0
     t_val = t-segment
     coords = np.power(1 - t_val, 3) * waypoints.T[:,segment] + 3 * np.power(1 - t_val, 2) * t_val * a[:,segment]\
-    + 3 * (1 - t_val) * np.power(t_val, 2) * b[:,segment] + np.power(t_val, 3) * waypoints.T[:,np.int(np.mod(segment+1,n))]
+    + 3 * (1 - t_val) * np.power(t_val, 2) * b[:,segment] + np.power(t_val, 3) * waypoints.T[:,int(np.mod(segment+1,n))]
 
     return coords
 
@@ -140,7 +140,7 @@ def generatelookuptable(track):
 
     lutable_density = 100 #[p/m]
 
-    npoints = np.int(np.floor(2 * smax * lutable_density))
+    npoints = int(np.floor(2 * smax * lutable_density))
     print("table generated with npoints = ", npoints)
     svals = np.linspace(0, 2*smax, npoints)
     tvals = ts_inverse(svals)

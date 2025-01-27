@@ -1,8 +1,5 @@
 /*
- * Copyright 2019 Gianluca Frison, Dimitris Kouzoupis, Robin Verschueren,
- * Andrea Zanelli, Niels van Duijkeren, Jonathan Frey, Tommaso Sartor,
- * Branimir Novoselnik, Rien Quirynen, Rezart Qelibari, Dang Doan,
- * Jonas Koenemann, Yutao Chen, Tobias Schöls, Jonas Schlagenhauf, Moritz Diehl
+ * Copyright (c) The acados authors.
  *
  * This file is part of acados.
  *
@@ -34,64 +31,165 @@
 #ifndef ACADOS_SOLVER_f110_kinematic_model_H_
 #define ACADOS_SOLVER_f110_kinematic_model_H_
 
+#include "acados/utils/types.h"
+
 #include "acados_c/ocp_nlp_interface.h"
 #include "acados_c/external_function_interface.h"
+
+#define F110_KINEMATIC_MODEL_NX     7
+#define F110_KINEMATIC_MODEL_NZ     0
+#define F110_KINEMATIC_MODEL_NU     3
+#define F110_KINEMATIC_MODEL_NP     12
+#define F110_KINEMATIC_MODEL_NP_GLOBAL     0
+#define F110_KINEMATIC_MODEL_NBX    4
+#define F110_KINEMATIC_MODEL_NBX0   7
+#define F110_KINEMATIC_MODEL_NBU    3
+#define F110_KINEMATIC_MODEL_NSBX   0
+#define F110_KINEMATIC_MODEL_NSBU   0
+#define F110_KINEMATIC_MODEL_NSH    1
+#define F110_KINEMATIC_MODEL_NSH0   0
+#define F110_KINEMATIC_MODEL_NSG    0
+#define F110_KINEMATIC_MODEL_NSPHI  0
+#define F110_KINEMATIC_MODEL_NSHN   0
+#define F110_KINEMATIC_MODEL_NSGN   0
+#define F110_KINEMATIC_MODEL_NSPHIN 0
+#define F110_KINEMATIC_MODEL_NSPHI0 0
+#define F110_KINEMATIC_MODEL_NSBXN  0
+#define F110_KINEMATIC_MODEL_NS     1
+#define F110_KINEMATIC_MODEL_NS0    0
+#define F110_KINEMATIC_MODEL_NSN    0
+#define F110_KINEMATIC_MODEL_NG     0
+#define F110_KINEMATIC_MODEL_NBXN   0
+#define F110_KINEMATIC_MODEL_NGN    0
+#define F110_KINEMATIC_MODEL_NY0    0
+#define F110_KINEMATIC_MODEL_NY     0
+#define F110_KINEMATIC_MODEL_NYN    0
+#define F110_KINEMATIC_MODEL_N      20
+#define F110_KINEMATIC_MODEL_NH     1
+#define F110_KINEMATIC_MODEL_NHN    0
+#define F110_KINEMATIC_MODEL_NH0    0
+#define F110_KINEMATIC_MODEL_NPHI0  0
+#define F110_KINEMATIC_MODEL_NPHI   0
+#define F110_KINEMATIC_MODEL_NPHIN  0
+#define F110_KINEMATIC_MODEL_NR     0
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int acados_create();
-int acados_update_params(int stage, double *value, int np);
-int acados_solve();
-int acados_free();
-void acados_print_stats();
 
-ocp_nlp_in * acados_get_nlp_in();
-ocp_nlp_out * acados_get_nlp_out();
-ocp_nlp_solver * acados_get_nlp_solver();
-ocp_nlp_config * acados_get_nlp_config();
-void * acados_get_nlp_opts();
-ocp_nlp_dims * acados_get_nlp_dims();
-ocp_nlp_plan * acados_get_nlp_plan();
+// ** capsule for solver data **
+typedef struct f110_kinematic_model_solver_capsule
+{
+    // acados objects
+    ocp_nlp_in *nlp_in;
+    ocp_nlp_out *nlp_out;
+    ocp_nlp_out *sens_out;
+    ocp_nlp_solver *nlp_solver;
+    void *nlp_opts;
+    ocp_nlp_plan_t *nlp_solver_plan;
+    ocp_nlp_config *nlp_config;
+    ocp_nlp_dims *nlp_dims;
+
+    // number of expected runtime parameters
+    unsigned int nlp_np;
+
+    /* external functions */
+
+    // dynamics
+
+    external_function_external_param_casadi *expl_vde_forw;
+    external_function_external_param_casadi *expl_ode_fun;
+    external_function_external_param_casadi *expl_vde_adj;
+
+
+
+
+    // cost
+
+    external_function_external_param_casadi *ext_cost_fun;
+    external_function_external_param_casadi *ext_cost_fun_jac;
+    external_function_external_param_casadi *ext_cost_fun_jac_hess;
+
+
+
+
+
+    external_function_external_param_casadi ext_cost_0_fun;
+    external_function_external_param_casadi ext_cost_0_fun_jac;
+    external_function_external_param_casadi ext_cost_0_fun_jac_hess;
+
+
+
+
+
+    // constraints
+    external_function_external_param_casadi *nl_constr_h_fun_jac;
+    external_function_external_param_casadi *nl_constr_h_fun;
+
+
+
+
+
+
+
+
+
+} f110_kinematic_model_solver_capsule;
+
+ACADOS_SYMBOL_EXPORT f110_kinematic_model_solver_capsule * f110_kinematic_model_acados_create_capsule(void);
+ACADOS_SYMBOL_EXPORT int f110_kinematic_model_acados_free_capsule(f110_kinematic_model_solver_capsule *capsule);
+
+ACADOS_SYMBOL_EXPORT int f110_kinematic_model_acados_create(f110_kinematic_model_solver_capsule * capsule);
+
+ACADOS_SYMBOL_EXPORT int f110_kinematic_model_acados_reset(f110_kinematic_model_solver_capsule* capsule, int reset_qp_solver_mem);
+
+/**
+ * Generic version of f110_kinematic_model_acados_create which allows to use a different number of shooting intervals than
+ * the number used for code generation. If new_time_steps=NULL and n_time_steps matches the number used for code
+ * generation, the time-steps from code generation is used.
+ */
+ACADOS_SYMBOL_EXPORT int f110_kinematic_model_acados_create_with_discretization(f110_kinematic_model_solver_capsule * capsule, int n_time_steps, double* new_time_steps);
+/**
+ * Update the time step vector. Number N must be identical to the currently set number of shooting nodes in the
+ * nlp_solver_plan. Returns 0 if no error occurred and a otherwise a value other than 0.
+ */
+ACADOS_SYMBOL_EXPORT int f110_kinematic_model_acados_update_time_steps(f110_kinematic_model_solver_capsule * capsule, int N, double* new_time_steps);
+/**
+ * This function is used for updating an already initialized solver with a different number of qp_cond_N.
+ */
+ACADOS_SYMBOL_EXPORT int f110_kinematic_model_acados_update_qp_solver_cond_N(f110_kinematic_model_solver_capsule * capsule, int qp_solver_cond_N);
+ACADOS_SYMBOL_EXPORT int f110_kinematic_model_acados_update_params(f110_kinematic_model_solver_capsule * capsule, int stage, double *value, int np);
+ACADOS_SYMBOL_EXPORT int f110_kinematic_model_acados_update_params_sparse(f110_kinematic_model_solver_capsule * capsule, int stage, int *idx, double *p, int n_update);
+ACADOS_SYMBOL_EXPORT int f110_kinematic_model_acados_set_p_global_and_precompute_dependencies(f110_kinematic_model_solver_capsule* capsule, double* data, int data_len);
+
+ACADOS_SYMBOL_EXPORT int f110_kinematic_model_acados_solve(f110_kinematic_model_solver_capsule * capsule);
+
+ACADOS_SYMBOL_EXPORT void f110_kinematic_model_acados_batch_solve(f110_kinematic_model_solver_capsule ** capsules, int N_batch);
+
+ACADOS_SYMBOL_EXPORT void f110_kinematic_model_acados_batch_set_flat(f110_kinematic_model_solver_capsule ** capsules, const char *field, double *data, int N_data, int N_batch);
+ACADOS_SYMBOL_EXPORT void f110_kinematic_model_acados_batch_get_flat(f110_kinematic_model_solver_capsule ** capsules, const char *field, double *data, int N_data, int N_batch);
+
+ACADOS_SYMBOL_EXPORT void f110_kinematic_model_acados_batch_eval_solution_sens_adj_p(f110_kinematic_model_solver_capsule ** capsules, const char *field, int stage, double *out, int offset, int N_batch);
+ACADOS_SYMBOL_EXPORT void f110_kinematic_model_acados_batch_eval_params_jac(f110_kinematic_model_solver_capsule ** capsules, int N_batch);
+
+
+ACADOS_SYMBOL_EXPORT int f110_kinematic_model_acados_free(f110_kinematic_model_solver_capsule * capsule);
+ACADOS_SYMBOL_EXPORT void f110_kinematic_model_acados_print_stats(f110_kinematic_model_solver_capsule * capsule);
+ACADOS_SYMBOL_EXPORT int f110_kinematic_model_acados_custom_update(f110_kinematic_model_solver_capsule* capsule, double* data, int data_len);
+
+
+ACADOS_SYMBOL_EXPORT ocp_nlp_in *f110_kinematic_model_acados_get_nlp_in(f110_kinematic_model_solver_capsule * capsule);
+ACADOS_SYMBOL_EXPORT ocp_nlp_out *f110_kinematic_model_acados_get_nlp_out(f110_kinematic_model_solver_capsule * capsule);
+ACADOS_SYMBOL_EXPORT ocp_nlp_out *f110_kinematic_model_acados_get_sens_out(f110_kinematic_model_solver_capsule * capsule);
+ACADOS_SYMBOL_EXPORT ocp_nlp_solver *f110_kinematic_model_acados_get_nlp_solver(f110_kinematic_model_solver_capsule * capsule);
+ACADOS_SYMBOL_EXPORT ocp_nlp_config *f110_kinematic_model_acados_get_nlp_config(f110_kinematic_model_solver_capsule * capsule);
+ACADOS_SYMBOL_EXPORT void *f110_kinematic_model_acados_get_nlp_opts(f110_kinematic_model_solver_capsule * capsule);
+ACADOS_SYMBOL_EXPORT ocp_nlp_dims *f110_kinematic_model_acados_get_nlp_dims(f110_kinematic_model_solver_capsule * capsule);
+ACADOS_SYMBOL_EXPORT ocp_nlp_plan_t *f110_kinematic_model_acados_get_nlp_plan(f110_kinematic_model_solver_capsule * capsule);
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-
-// ** global data **
-// acados objects
-extern ocp_nlp_in * nlp_in;
-extern ocp_nlp_out * nlp_out;
-extern ocp_nlp_solver * nlp_solver;
-extern void * nlp_opts;
-extern ocp_nlp_plan * nlp_solver_plan;
-extern ocp_nlp_config * nlp_config;
-extern ocp_nlp_dims * nlp_dims;
-
-/* external functions */
-// dynamics
-
-extern external_function_param_casadi * forw_vde_casadi;
-extern external_function_param_casadi * expl_ode_fun;
-
-
-
-// cost
-
-extern external_function_param_casadi * ext_cost_fun;
-extern external_function_param_casadi * ext_cost_fun_jac;
-extern external_function_param_casadi * ext_cost_fun_jac_hess;
-
-
-
-// constraints
-extern external_function_param_casadi * nl_constr_h_fun_jac;
-extern external_function_param_casadi * nl_constr_h_fun;
-extern external_function_param_casadi * nl_constr_h_fun_jac_hess;
-
-
-
-
 
 #endif  // ACADOS_SOLVER_f110_kinematic_model_H_
